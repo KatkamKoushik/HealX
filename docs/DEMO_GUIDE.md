@@ -1,11 +1,11 @@
 # Guided Demonstration Script for SFIC Jury & Evaluators
 ## Seva First Innovation Challenge (SFIC) • South Zone • Level 3
-**Theme 3: Swasth & Samavesh Bharat**
+**Theme 3: Swasth & Samavesh Bharat • HealX Platform**
 
 ---
 
 ### Overview for Evaluators
-This walkthrough guides evaluators through the core capabilities of **MediFlow (Healix / ResQ 2.0)**, demonstrating how an accessible, multilingual healthcare navigation platform bridges information barriers for citizens across South India.
+This walkthrough guides evaluators through the core capabilities of **HealX**, demonstrating how an accessible, multilingual healthcare navigation platform bridges information barriers for citizens across South India.
 
 ---
 
@@ -14,19 +14,19 @@ This walkthrough guides evaluators through the core capabilities of **MediFlow (
 #### 1. Public Landing Page & Language Switcher
 - **URL:** `/`
 - **Actions to Test:**
-  - Notice the configurable platform name (**MediFlow** / **Healix** / **ResQ 2.0**) and competition badge.
-  - Click the **తెలుగు** button in the header navigation: notice the entire UI, headings, benefits, and search placeholder immediately update into natural Telugu script.
+  - Notice the platform branding **HealX** and SFIC Level 3 theme banner.
+  - Click the **తెలుగు** button in the header navigation: notice the entire UI, navigation links, benefits, and search placeholder immediately update into natural Telugu script.
   - Click **"Listen to Introduction (TTS)"**: observe browser SpeechSynthesis reading the platform introduction aloud.
-  - In the search bar, type `Hyderabad` or `Cardiology` and press Search.
+  - In the search bar, type `Hyderabad` or `Emergency` and press Search.
 
 #### 2. Healthcare Facility Directory
 - **URL:** `/hospitals`
 - **Actions to Test:**
-  - Filter by **City / Region** (e.g. `Vijayawada`, `Warangal`, `Tirupati`).
+  - Filter by **City / Region** (e.g. `Vijayawada`, `Warangal`, `Tirupati`, `Hyderabad`).
   - Filter by **Verification Status** (e.g. `Verified` vs `Needs Review`).
   - On any hospital card, click the **Audio Icon (Volume)**: listen to the facility's address, operating hours, and emergency casualty status read aloud.
   - Click **"Get Directions"**: verifies generation of standard Google Maps direction URLs without requiring paid API keys.
-  - Click **"View Hospital Details"** on *Prana South Charminar Community Hospital*.
+  - Click **"View Hospital Details"** on *Charminar Community Hospital*.
 
 #### 3. Facility Details & Verification Audit
 - **URL:** `/hospitals/hosp-001-hyd-charminar`
@@ -39,9 +39,9 @@ This walkthrough guides evaluators through the core capabilities of **MediFlow (
 - **Actions to Test:**
   - Review the prominent non-diagnostic medical disclaimer banner.
   - Click a sample query: *"Where can I find 24/7 emergency pediatrics in Vijayawada?"*
-  - Notice the grounded response citing **Amaravati Metro Public Hospital** with a clickable citation pill linking directly to the facility record.
+  - Notice the grounded response citing facility records with clickable citation pills linking directly to the verified facility details.
   - Click **"Listen to Answer"**: listen to the assistant's answer read aloud via browser speech synthesis.
-  - Note the active provider pipeline badge: **Gemini → Grok → Offline Fallback**.
+  - Note the active provider pipeline badge: **Gemini 3.8 Flash → Grok / Groq → Deterministic Fallback**.
 
 #### 5. Accessibility Center
 - **URL:** `/accessibility`
@@ -53,8 +53,9 @@ This walkthrough guides evaluators through the core capabilities of **MediFlow (
 #### 6. Staff Administrative Console
 - **URL:** `/admin`
 - **Actions to Test:**
-  - Sign in or click **"Fill Admin Credentials"** at `/login` (`admin@example-health.org` / `DemoPass2026!`).
-  - View real-time verification coverage percentage, total facilities, and external integrations status (Supabase, Gemini, Grok, Twilio).
+  - If unauthenticated, the application automatically redirects to `/login`.
+  - Sign in or click **"Fill Admin Credentials"** at `/login` (`admin@healx.org` / `DemoPass2026!`).
+  - View real-time verification coverage percentage, total facilities, and external integrations status (Supabase PostgreSQL, Gemini, Grok/Groq, Twilio).
 
 #### 7. Verification Workflow in Action
 - **URL:** `/admin/verification`
@@ -62,12 +63,12 @@ This walkthrough guides evaluators through the core capabilities of **MediFlow (
   - Locate an unverified or needs-review hospital (e.g. *Kakatiya Area Health Centre*).
   - Click **"Update Verification Status"**.
   - Change status to **Verified**, enter verification notes, and submit.
-  - Notice the record immediately updates to **Verified** and appears in system audit logs.
+  - Notice the record immediately updates to **Verified** and a verification record is persisted in the database.
 
 #### 8. Interactive IVR Telephony Simulation
 - **URL:** `/admin/ivr`
 - **Actions to Test:**
-  - Click **"Simulate Call to MediFlow"**.
+  - Click **"Simulate Call to HealX"**.
   - Hear or read the automated greeting: *"Press 1 for English, తెలుగు కొరకు 2 నొక్కండి"*.
   - Press **1** on the dialpad to enter English Main Menu.
   - Press **1** on the dialpad to browse hospitals.

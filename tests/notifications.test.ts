@@ -56,25 +56,25 @@ describe('Telephony & Notification Services', () => {
     }
   });
 
-  it('advances IVR state machine upon keypad digit input', () => {
+  it('advances IVR state machine upon keypad digit input', async () => {
     const initialState = ivrService.getInitialState();
     assert.strictEqual(initialState.currentStep, 'LANGUAGE_SELECT');
 
     // Press 1 for English
-    const step1 = ivrService.processInput(initialState, '1');
+    const step1 = await ivrService.processInput(initialState, '1');
     assert.strictEqual(step1.state.language, 'en');
     assert.strictEqual(step1.state.currentStep, 'MAIN_MENU');
     assert.strictEqual(step1.availableOptions.some((o) => o.key === '1'), true);
 
     // Press 1 for Hospitals
-    const step2 = ivrService.processInput(step1.state, '1');
+    const step2 = await ivrService.processInput(step1.state, '1');
     assert.strictEqual(step2.state.currentStep, 'HOSPITALS_MENU');
     assert.ok(step2.promptText.includes('Select a facility'));
   });
 
-  it('supports Telugu IVR menu tree when digit 2 is pressed', () => {
+  it('supports Telugu IVR menu tree when digit 2 is pressed', async () => {
     const initialState = ivrService.getInitialState();
-    const step1 = ivrService.processInput(initialState, '2');
+    const step1 = await ivrService.processInput(initialState, '2');
 
     assert.strictEqual(step1.state.language, 'te');
     assert.strictEqual(step1.state.currentStep, 'MAIN_MENU');

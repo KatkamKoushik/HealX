@@ -1,6 +1,7 @@
 /**
- * Interactive IVR (Interactive Voice Response) Simulation Service
- * Provides state-machine transitions and speech prompt generator for telephone navigation simulation.
+ * IVR Telephony Simulation Service
+ * Interactive phone tree simulator with bilingual prompts (English & Telugu),
+ * DTMF keypad digit navigation, emergency safety routing, and speech synthesis strings.
  */
 
 import APP_CONFIG from '@/config/app-config';
@@ -35,8 +36,10 @@ export interface IvrPromptResult {
   availableOptions: IvrMenuOption[];
 }
 
-export class IvrSimulationService {
+class IvrSimulationService {
   private static instance: IvrSimulationService;
+
+  private constructor() {}
 
   public static getInstance(): IvrSimulationService {
     if (!IvrSimulationService.instance) {
@@ -53,10 +56,10 @@ export class IvrSimulationService {
     };
   }
 
-  public processInput(currentState: IvrState, digit: string): IvrPromptResult {
+  public async processInput(currentState: IvrState, digit: string): Promise<IvrPromptResult> {
     const state: IvrState = { ...currentState, history: [...currentState.history, digit] };
     const store = getDataStore();
-    const hospitals = store.getHospitals({ activeOnly: true });
+    const hospitals = await store.getHospitals({ activeOnly: true });
 
     switch (state.currentStep) {
       case 'LANGUAGE_SELECT': {
@@ -125,7 +128,7 @@ export class IvrSimulationService {
     }
   }
 
-  public renderStep(state: IvrState): IvrPromptResult {
+  public async renderStep(state: IvrState): Promise<IvrPromptResult> {
     const store = getDataStore();
     const isTe = state.language === 'te';
 
@@ -168,7 +171,7 @@ export class IvrSimulationService {
         };
 
       case 'HOSPITALS_MENU': {
-        const topHospitals = store.getHospitals({ activeOnly: true }).slice(0, 4);
+        const topHospitals = (await store.getHospitals({ activeOnly: true })).slice(0, 4);
         const options: IvrMenuOption[] = topHospitals.map((h, i) => ({
           key: String(i + 1),
           label: h.name,
@@ -194,7 +197,7 @@ export class IvrSimulationService {
 
       case 'HOSPITAL_DETAILS': {
         const hosp = state.selectedHospitalId
-          ? store.getHospitalById(state.selectedHospitalId)
+          ? await store.getHospitalById(state.selectedHospitalId)
           : null;
         if (!hosp) {
           state.currentStep = 'HOSPITALS_MENU';
@@ -229,7 +232,7 @@ export class IvrSimulationService {
       }
 
       case 'DEPARTMENTS_MENU': {
-        const depts = store.getDepartments().slice(0, 4);
+        const depts = (await store.getDepartments()).slice(0, 4);
         const promptText = isTe
           ? `అందుబాటులో ఉన్న ముఖ్య విభాగాలు:\n` +
             depts.map((d, i) => `${i + 1}: ${d.name} (${d.hospital_name})`).join('\n') +
@@ -255,8 +258,8 @@ export class IvrSimulationService {
 
       case 'EMERGENCY_INFO': {
         const promptText = isTe
-          ? `అత్యవసర సమాచారం:\nతీవ్రమైన వైద్య అత్యవసర పరిస్థితుల్లో వెంటనే 108 లేదా 112 కు కాల్ చేయండి.\n24/7 ఎమర్జెన్సీ మరియు ట్రామా కేర్ అందుబాటులో ఉన్న ఆసుపత్రి: Prana South Charminar Community Hospital, ఫోన్: +91-40-555-0101.\n\n*: ప్రధాన మెనూకు వెళ్లండి`
-          : `EMERGENCY ALERT:\nIn a severe medical emergency, please hang up immediately and dial 108 or 112.\nNearest 24/7 Trauma and Casualty Centre: Prana South Charminar Community Hospital, Moghalpura, Hyderabad. Phone: +91-40-555-0101.\n\n*: Return to Main Menu`;
+          ? `అత్యవసర సమాచారం:\nతీవ్రమైన వైద్య అత్యవసర పరిస్థితుల్లో వెంటనే 108 లేదా 112 కు కాల్ చేయండి.\n24/7 ఎమర్జెన్సీ మరియు ట్రామా కేర్ అందుబాటులో ఉన్న ఆసుపత్రి: Charminar Community Hospital, ఫోన్: +91-40-555-0101.\n\n*: ప్రధాన మెనూకు వెళ్లండి`
+          : `EMERGENCY ALERT:\nIn a severe medical emergency, please hang up immediately and dial 108 or 112.\nNearest 24/7 Trauma and Casualty Centre: Charminar Community Hospital, Moghalpura, Hyderabad. Phone: +91-40-555-0101.\n\n*: Return to Main Menu`;
 
         return {
           state,

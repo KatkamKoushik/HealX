@@ -1,6 +1,6 @@
 /**
  * AI Healthcare Navigation Service: Waterfall Orchestrator
- * Priority Pipeline: Gemini -> Grok -> Deterministic Directory Fallback
+ * Priority Pipeline: Gemini -> Grok/Groq -> Deterministic Directory Fallback
  * Implements timeout limits, circuit breaking, grounded retrieval, and zero-diagnostic constraints.
  */
 
@@ -32,7 +32,7 @@ interface ProviderHealth {
   lastErrorMessage: string | null;
 }
 
-class AiWaterfallService {
+export class AiWaterfallService {
   private static instance: AiWaterfallService;
   private providerHealth: Record<'gemini' | 'grok', ProviderHealth> = {
     gemini: { status: 'healthy', consecutiveFailures: 0, lastFailureTime: null, lastErrorMessage: null },
@@ -41,7 +41,7 @@ class AiWaterfallService {
 
   private readonly cooldownPeriodMs = 60000; // 1 minute cooldown after repeated failures
 
-  private constructor() {
+  public constructor() {
     this.refreshProviderConfigStatus();
   }
 
@@ -75,7 +75,7 @@ class AiWaterfallService {
     }
   }
 
-  private isProviderInCooldown(provider: 'gemini' | 'grok'): boolean {
+  public isProviderInCooldown(provider: 'gemini' | 'grok'): boolean {
     const health = this.providerHealth[provider];
     if (health.status === 'cooldown' && health.lastFailureTime) {
       if (Date.now() - health.lastFailureTime > this.cooldownPeriodMs) {
@@ -88,13 +88,13 @@ class AiWaterfallService {
     return false;
   }
 
-  private recordSuccess(provider: 'gemini' | 'grok') {
+  public recordSuccess(provider: 'gemini' | 'grok') {
     this.providerHealth[provider].status = 'healthy';
     this.providerHealth[provider].consecutiveFailures = 0;
     this.providerHealth[provider].lastErrorMessage = null;
   }
 
-  private recordFailure(provider: 'gemini' | 'grok', errorMsg: string, isPermanent = false) {
+  public recordFailure(provider: 'gemini' | 'grok', errorMsg: string, isPermanent = false) {
     const health = this.providerHealth[provider];
     health.consecutiveFailures += 1;
     health.lastFailureTime = Date.now();
@@ -116,7 +116,7 @@ class AiWaterfallService {
 
     // 1. Retrieve grounded directory records for context
     const dataStore = getDataStore();
-    const allHospitals = dataStore.getHospitals({ activeOnly: true });
+    const allHospitals = await dataStore.getHospitals({ activeOnly: true });
     const relevantHospitals = this.filterRelevantDirectory(userQuery, allHospitals);
 
     const citations: AiSourceCitation[] = relevantHospitals.slice(0, 3).map((h) => ({
@@ -149,7 +149,8 @@ class AiWaterfallService {
         }
 
         try {
-          const answer = await this.callGemini(userQuery, relevantHospitals, language, geminiKey);
+          const modelName = process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash';
+          const answer = await this.callGemini(userQuery, relevantHospitals, language, geminiKey, modelName);
           this.recordSuccess('gemini');
           return {
             answer,
@@ -159,14 +160,15 @@ class AiWaterfallService {
             requestId,
             providerUsed: 'gemini',
             fallbackTriggered,
-            modelName: 'gemini-1.5-flash',
+            modelName,
             latencyMs: Date.now() - startTime,
           };
         } catch (err: unknown) {
           fallbackTriggered = true;
           const msg = err instanceof Error ? err.message : 'Gemini error';
-          this.recordFailure('gemini', msg);
-          // Continue to next provider in waterfall
+          const isPermanent = msg.includes('401') || msg.includes('403') || msg.includes('API_KEY_INVALID');
+          this.recordFailure('gemini', msg, isPermanent);
+          // Failover to next provider
         }
       }
 
@@ -178,7 +180,11 @@ class AiWaterfallService {
         }
 
         try {
-          const answer = await this.callGrok(userQuery, relevantHospitals, language, grokKey);
+          const isGroq = grokKey.startsWith('gsk_');
+          const defaultModel = isGroq ? 'qwen/qwen3.8-27b' : 'grok-beta';
+          const modelName = process.env.GROK_MODEL?.trim() || defaultModel;
+
+          const answer = await this.callGrok(userQuery, relevantHospitals, language, grokKey, modelName, isGroq);
           this.recordSuccess('grok');
           return {
             answer,
@@ -188,19 +194,20 @@ class AiWaterfallService {
             requestId,
             providerUsed: 'grok',
             fallbackTriggered: true,
-            modelName: 'grok-beta',
+            modelName,
             latencyMs: Date.now() - startTime,
           };
         } catch (err: unknown) {
           fallbackTriggered = true;
           const msg = err instanceof Error ? err.message : 'Grok error';
-          this.recordFailure('grok', msg);
-          // Continue to deterministic fallback
+          const isPermanent = msg.includes('401') || msg.includes('403');
+          this.recordFailure('grok', msg, isPermanent);
+          // Failover to deterministic fallback
         }
       }
     }
 
-    // 3. Deterministic Directory Fallback (Safe, offline-ready, always available)
+    // 3. Deterministic Directory Fallback (Offline-ready, grounded citations)
     return this.generateDeterministicFallback(
       userQuery,
       relevantHospitals,
@@ -213,7 +220,7 @@ class AiWaterfallService {
     );
   }
 
-  private filterRelevantDirectory(query: string, hospitals: Hospital[]): Hospital[] {
+  public filterRelevantDirectory(query: string, hospitals: Hospital[]): Hospital[] {
     const q = query.toLowerCase();
     const scored = hospitals.map((h) => {
       let score = 0;
@@ -230,7 +237,7 @@ class AiWaterfallService {
     return top.length > 0 ? top : hospitals.slice(0, 3);
   }
 
-  private constructSystemPrompt(hospitals: Hospital[], language: 'en' | 'te'): string {
+  public constructSystemPrompt(hospitals: Hospital[], language: 'en' | 'te'): string {
     const directoryContext = hospitals
       .map(
         (h) => `
@@ -268,11 +275,12 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
 `;
   }
 
-  private async callGemini(
+  public async callGemini(
     query: string,
     hospitals: Hospital[],
     language: 'en' | 'te',
-    apiKey: string
+    apiKey: string,
+    modelName = 'gemini-3.8-flash'
   ): Promise<string> {
     const systemPrompt = this.constructSystemPrompt(hospitals, language);
     const timeoutMs = APP_CONFIG.ai.timeoutMs;
@@ -281,7 +289,8 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // Use header authentication to avoid leaking key in URL parameters
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
       const payload = {
         contents: [
           {
@@ -297,7 +306,10 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
 
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
@@ -318,11 +330,13 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     }
   }
 
-  private async callGrok(
+  public async callGrok(
     query: string,
     hospitals: Hospital[],
     language: 'en' | 'te',
-    apiKey: string
+    apiKey: string,
+    modelName = 'qwen/qwen3.8-27b',
+    isGroq = false
   ): Promise<string> {
     const systemPrompt = this.constructSystemPrompt(hospitals, language);
     const timeoutMs = APP_CONFIG.ai.timeoutMs;
@@ -331,9 +345,12 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const endpoint = 'https://api.x.ai/v1/chat/completions';
+      const endpoint = isGroq
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://api.x.ai/v1/chat/completions';
+
       const payload = {
-        model: 'grok-beta',
+        model: modelName,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: query },
@@ -368,7 +385,7 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     }
   }
 
-  private generateDeterministicFallback(
+  public generateDeterministicFallback(
     query: string,
     hospitals: Hospital[],
     language: 'en' | 'te',

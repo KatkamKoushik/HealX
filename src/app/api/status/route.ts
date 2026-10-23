@@ -1,18 +1,21 @@
 /**
  * API Route: /api/status
- * GET: System and external integration status.
+ * GET: System health and external integration status.
  * Never exposes secrets, keys, or token fragments.
+ * Accurately verifies actual database connectivity.
  */
 
 import { NextResponse } from 'next/server';
 import APP_CONFIG from '@/config/app-config';
+import { getDataStore } from '@/lib/repository/data-store';
+import { getAiService } from '@/lib/ai/ai-service';
 
 export async function GET() {
-  const hasSupabaseUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());
-  const hasSupabaseAnon = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
-  const hasSupabaseService = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
-  const hasGrok = Boolean(process.env.GROK_API_KEY?.trim());
+  const store = getDataStore();
+  const dbHealth = await store.checkHealth();
+  const aiService = getAiService();
+  const aiStatus = aiService.getProviderStatus();
+
   const hasTwilioSid = Boolean(process.env.TWILIO_ACCOUNT_SID?.trim());
   const hasTwilioAuth = Boolean(process.env.TWILIO_AUTH_TOKEN?.trim());
   const hasTwilioPhone = Boolean(process.env.TWILIO_PHONE_NUMBER?.trim());
@@ -22,22 +25,36 @@ export async function GET() {
     data: {
       appName: APP_CONFIG.name,
       version: APP_CONFIG.version,
-      activeDataSource: hasSupabaseUrl && hasSupabaseAnon ? 'Supabase PostgreSQL' : 'Local In-Memory Repository (Demo Mode)',
+      uptimeSeconds: Math.floor(process.uptime()),
+      activeDataSource: store.getDataSourceType() === 'supabase' ? 'Supabase PostgreSQL' : 'Local In-Memory Repository (Demo Mode)',
+      dataSourceType: store.getDataSourceType(),
+      databaseHealth: {
+        connected: dbHealth.healthy,
+        message: dbHealth.message,
+      },
       integrations: {
-        supabase: {
-          configured: hasSupabaseUrl && hasSupabaseAnon,
-          hasServiceRole: hasSupabaseService,
-          status: hasSupabaseUrl && hasSupabaseAnon ? 'configured' : 'mock_fallback',
+        database: {
+          type: store.getDataSourceType(),
+          status: dbHealth.healthy ? 'healthy' : 'degraded',
+          message: dbHealth.message,
         },
         gemini: {
-          configured: hasGemini,
+          configured: aiStatus.gemini.configured,
           priority: APP_CONFIG.ai.providerOrder.indexOf('gemini') + 1,
-          status: hasGemini ? 'configured' : 'unconfigured_fallback',
+          status: aiStatus.gemini.configured
+            ? aiStatus.gemini.status === 'cooldown'
+              ? 'cooldown'
+              : 'configured'
+            : 'unconfigured_fallback',
         },
         grok: {
-          configured: hasGrok,
+          configured: aiStatus.grok.configured,
           priority: APP_CONFIG.ai.providerOrder.indexOf('grok') + 1,
-          status: hasGrok ? 'configured' : 'unconfigured_fallback',
+          status: aiStatus.grok.configured
+            ? aiStatus.grok.status === 'cooldown'
+              ? 'cooldown'
+              : 'configured'
+            : 'unconfigured_fallback',
         },
         sms: {
           mode: APP_CONFIG.sms.mode,

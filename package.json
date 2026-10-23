@@ -9,7 +9,7 @@
     "start": "node scripts/ensure-swc.mjs && NEXT_TEST_NATIVE_DIR=/tmp/swc node node_modules/next/dist/bin/next start",
     "lint": "node node_modules/next/dist/bin/next lint",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
-    "test": "node scripts/run-tests.mjs"
+    "test": "node --test -r ./scripts/test-register.cjs tests/*.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",

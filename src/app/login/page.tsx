@@ -37,20 +37,27 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      if (isSupabaseConfigured()) {
-        const supabase = getBrowserSupabaseClient();
-        if (supabase) {
-          const { error: authError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (authError) throw authError;
-        }
+      const supabase = getBrowserSupabaseClient();
+      if (!supabase) {
+        throw new Error('Authentication service is unconfigured. Supabase URL and key must be provided.');
       }
 
-      // Record simulated session cookie or redirect to /admin
-      document.cookie = `sfic_staff_auth=true; path=/; max-age=86400`;
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        throw new Error(authError.message || 'Invalid email or password.');
+      }
+
+      if (!data.session) {
+        throw new Error('Authentication failed: No active session returned.');
+      }
+
+      // Successful server-verified authentication
       router.push('/admin');
+      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid login credentials');
     } finally {
@@ -59,8 +66,13 @@ export default function LoginPage() {
   };
 
   const handleDemoLogin = (role: 'staff' | 'admin') => {
-    setEmail(role === 'admin' ? 'admin@example-health.org' : 'evaluator.staff@example-health.org');
-    setPassword('DemoPass2026!');
+    if (role === 'admin') {
+      setEmail('admin@healx.org');
+      setPassword('DemoPass2026!');
+    } else {
+      setEmail('staff@healx.org');
+      setPassword('DemoPass2026!');
+    }
   };
 
   return (

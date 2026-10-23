@@ -48,12 +48,12 @@ export class SmsNotificationService {
     const messagePreview =
       req.messageText.length > 80 ? `${req.messageText.substring(0, 77)}...` : req.messageText;
 
-    const configuredMode = APP_CONFIG.sms.mode;
-    const forceMock = req.isSimulated !== false || configuredMode === 'mock';
+    const isExplicitReal = req.isSimulated === false || (process.env.SMS_MODE === 'real' && req.isSimulated !== true);
+    const forceMock = !isExplicitReal;
 
     // 1. MOCK MODE (Default demo behavior)
     if (forceMock) {
-      const log = store.logNotification({
+      const log = await store.logNotification({
         notification_type: 'sms',
         recipient_reference: recipientRef,
         message_preview: messagePreview,
@@ -81,7 +81,7 @@ export class SmsNotificationService {
     const fromPhone = process.env.TWILIO_PHONE_NUMBER?.trim();
 
     if (!accountSid || !authToken || !fromPhone) {
-      const log = store.logNotification({
+      const log = await store.logNotification({
         notification_type: 'sms',
         recipient_reference: recipientRef,
         message_preview: messagePreview,
@@ -127,7 +127,7 @@ export class SmsNotificationService {
         throw new Error(data?.message || `Twilio HTTP ${response.status}`);
       }
 
-      const log = store.logNotification({
+      const log = await store.logNotification({
         notification_type: 'sms',
         recipient_reference: recipientRef,
         message_preview: messagePreview,
@@ -148,7 +148,7 @@ export class SmsNotificationService {
       };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Twilio dispatch failed.';
-      const log = store.logNotification({
+      const log = await store.logNotification({
         notification_type: 'sms',
         recipient_reference: recipientRef,
         message_preview: messagePreview,

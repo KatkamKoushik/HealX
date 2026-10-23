@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const response = await aiService.askNavigationAssistant(query, language);
 
     // Record non-sensitive usage event
-    store.logUsageEvent({
+    await store.logUsageEvent({
       event_type: 'assistant_query',
       page_name: 'assistant',
       anonymised_session_id: null,

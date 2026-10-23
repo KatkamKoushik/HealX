@@ -20,6 +20,10 @@ export async function GET() {
   const geminiRaw = cleanEnv(process.env.GEMINI_API_KEY);
   const grokRaw = cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY);
 
+  const hasTwilioSid = Boolean(cleanEnv(process.env.TWILIO_ACCOUNT_SID));
+  const hasTwilioAuth = Boolean(cleanEnv(process.env.TWILIO_AUTH_TOKEN));
+  const hasTwilioPhone = Boolean(cleanEnv(process.env.TWILIO_PHONE_NUMBER));
+
   return NextResponse.json({
     success: true,
     data: {

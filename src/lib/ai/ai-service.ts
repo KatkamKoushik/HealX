@@ -57,7 +57,7 @@ export class AiWaterfallService {
     this.refreshProviderConfigStatus();
     return {
       gemini: { ...this.providerHealth.gemini, configured: Boolean(cleanEnv(process.env.GEMINI_API_KEY)) },
-      grok: { ...this.providerHealth.grok, configured: Boolean(cleanEnv(process.env.GROK_API_KEY)) },
+      grok: { ...this.providerHealth.grok, configured: Boolean(cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY)) },
       order: APP_CONFIG.ai.providerOrder,
       timeoutMs: APP_CONFIG.ai.timeoutMs,
       maxRetries: APP_CONFIG.ai.maxRetries,
@@ -66,7 +66,7 @@ export class AiWaterfallService {
 
   private refreshProviderConfigStatus() {
     const hasGemini = Boolean(cleanEnv(process.env.GEMINI_API_KEY));
-    const hasGrok = Boolean(cleanEnv(process.env.GROK_API_KEY));
+    const hasGrok = Boolean(cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY));
 
     if (!hasGemini && this.providerHealth.gemini.status !== 'cooldown') {
       this.providerHealth.gemini.status = 'unconfigured';
@@ -175,7 +175,7 @@ export class AiWaterfallService {
       }
 
       if (provider === 'grok') {
-        const grokKey = cleanEnv(process.env.GROK_API_KEY);
+        const grokKey = cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY);
         if (!grokKey || this.isProviderInCooldown('grok')) {
           fallbackTriggered = true;
           continue;

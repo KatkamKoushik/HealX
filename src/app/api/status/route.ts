@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import APP_CONFIG from '@/config/app-config';
 import { getDataStore } from '@/lib/repository/data-store';
 import { getAiService } from '@/lib/ai/ai-service';
+import { cleanEnv } from '@/lib/utils/env';
 
 export async function GET() {
   const store = getDataStore();
@@ -16,9 +17,8 @@ export async function GET() {
   const aiService = getAiService();
   const aiStatus = aiService.getProviderStatus();
 
-  const hasTwilioSid = Boolean(process.env.TWILIO_ACCOUNT_SID?.trim());
-  const hasTwilioAuth = Boolean(process.env.TWILIO_AUTH_TOKEN?.trim());
-  const hasTwilioPhone = Boolean(process.env.TWILIO_PHONE_NUMBER?.trim());
+  const geminiRaw = cleanEnv(process.env.GEMINI_API_KEY);
+  const grokRaw = cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY);
 
   return NextResponse.json({
     success: true,
@@ -31,6 +31,18 @@ export async function GET() {
       databaseHealth: {
         connected: dbHealth.healthy,
         message: dbHealth.message,
+      },
+      diagnostics: {
+        geminiConfigured: Boolean(geminiRaw),
+        geminiKeyPrefix: geminiRaw ? `${geminiRaw.slice(0, 3)}...${geminiRaw.slice(-3)}` : 'none',
+        geminiKeyLength: geminiRaw.length,
+        geminiModel: cleanEnv(process.env.GEMINI_MODEL) || 'gemini-flash-lite-latest',
+        grokConfigured: Boolean(grokRaw),
+        grokKeyPrefix: grokRaw ? `${grokRaw.slice(0, 4)}...${grokRaw.slice(-3)}` : 'none',
+        grokKeyLength: grokRaw.length,
+        grokModel: cleanEnv(process.env.GROK_MODEL) || 'qwen/qwen3.8-27b',
+        hasDbUrl: Boolean(cleanEnv(process.env.DATABASE_URL)),
+        hasDirectUrl: Boolean(cleanEnv(process.env.DIRECT_URL)),
       },
       integrations: {
         database: {

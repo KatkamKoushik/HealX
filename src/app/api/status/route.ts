@@ -11,6 +11,8 @@ import { getDataStore } from '@/lib/repository/data-store';
 import { getAiService } from '@/lib/ai/ai-service';
 import { cleanEnv } from '@/lib/utils/env';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const store = getDataStore();
   const dbHealth = await store.checkHealth();

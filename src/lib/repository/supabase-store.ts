@@ -24,12 +24,14 @@ import {
   CreateHospitalInput,
   CreateDepartmentInput,
 } from './types';
+import { cleanEnv } from '../utils/env';
 
 let sqlClient: ReturnType<typeof postgres> | null = null;
 
 function getSql() {
   if (!sqlClient) {
-    const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+    const rawConnection = process.env.DIRECT_URL || process.env.DATABASE_URL;
+    const connectionString = cleanEnv(rawConnection);
     if (!connectionString) {
       throw new Error('Supabase database connection string (DIRECT_URL or DATABASE_URL) is not configured.');
     }

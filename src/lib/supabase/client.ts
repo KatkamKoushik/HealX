@@ -6,14 +6,15 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cleanEnv } from '../utils/env';
 
 let cachedClient: SupabaseClient | null = null;
 
 export function getBrowserSupabaseClient(): SupabaseClient | null {
   if (typeof window === 'undefined') return null;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const url = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!url || !anonKey) {
     return null;
@@ -28,7 +29,7 @@ export function getBrowserSupabaseClient(): SupabaseClient | null {
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   );
 }

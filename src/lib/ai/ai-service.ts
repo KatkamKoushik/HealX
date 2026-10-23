@@ -7,6 +7,7 @@
 import APP_CONFIG from '@/config/app-config';
 import { getDataStore } from '@/lib/repository/data-store';
 import { Hospital } from '@/types/database';
+import { cleanEnv } from '../utils/env';
 
 export interface AiSourceCitation {
   label: string;
@@ -55,8 +56,8 @@ export class AiWaterfallService {
   public getProviderStatus() {
     this.refreshProviderConfigStatus();
     return {
-      gemini: { ...this.providerHealth.gemini, configured: Boolean(process.env.GEMINI_API_KEY?.trim()) },
-      grok: { ...this.providerHealth.grok, configured: Boolean(process.env.GROK_API_KEY?.trim()) },
+      gemini: { ...this.providerHealth.gemini, configured: Boolean(cleanEnv(process.env.GEMINI_API_KEY)) },
+      grok: { ...this.providerHealth.grok, configured: Boolean(cleanEnv(process.env.GROK_API_KEY)) },
       order: APP_CONFIG.ai.providerOrder,
       timeoutMs: APP_CONFIG.ai.timeoutMs,
       maxRetries: APP_CONFIG.ai.maxRetries,
@@ -64,8 +65,8 @@ export class AiWaterfallService {
   }
 
   private refreshProviderConfigStatus() {
-    const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
-    const hasGrok = Boolean(process.env.GROK_API_KEY?.trim());
+    const hasGemini = Boolean(cleanEnv(process.env.GEMINI_API_KEY));
+    const hasGrok = Boolean(cleanEnv(process.env.GROK_API_KEY));
 
     if (!hasGemini && this.providerHealth.gemini.status !== 'cooldown') {
       this.providerHealth.gemini.status = 'unconfigured';
@@ -142,14 +143,15 @@ export class AiWaterfallService {
     // 2. Iterate through configured providers
     for (const provider of providerOrder) {
       if (provider === 'gemini') {
-        const geminiKey = process.env.GEMINI_API_KEY?.trim();
+        const geminiKey = cleanEnv(process.env.GEMINI_API_KEY);
         if (!geminiKey || this.isProviderInCooldown('gemini')) {
           fallbackTriggered = true;
           continue;
         }
 
         try {
-          const modelName = process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash';
+          const configuredModel = cleanEnv(process.env.GEMINI_MODEL);
+          const modelName = configuredModel || 'gemini-flash-lite-latest';
           const answer = await this.callGemini(userQuery, relevantHospitals, language, geminiKey, modelName);
           this.recordSuccess('gemini');
           return {
@@ -173,7 +175,7 @@ export class AiWaterfallService {
       }
 
       if (provider === 'grok') {
-        const grokKey = process.env.GROK_API_KEY?.trim();
+        const grokKey = cleanEnv(process.env.GROK_API_KEY);
         if (!grokKey || this.isProviderInCooldown('grok')) {
           fallbackTriggered = true;
           continue;
@@ -182,7 +184,8 @@ export class AiWaterfallService {
         try {
           const isGroq = grokKey.startsWith('gsk_');
           const defaultModel = isGroq ? 'qwen/qwen3.8-27b' : 'grok-beta';
-          const modelName = process.env.GROK_MODEL?.trim() || defaultModel;
+          const configuredModel = cleanEnv(process.env.GROK_MODEL);
+          const modelName = configuredModel || defaultModel;
 
           const answer = await this.callGrok(userQuery, relevantHospitals, language, grokKey, modelName, isGroq);
           this.recordSuccess('grok');
@@ -280,17 +283,18 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     hospitals: Hospital[],
     language: 'en' | 'te',
     apiKey: string,
-    modelName = 'gemini-3.8-flash'
+    modelName = 'gemini-flash-lite-latest'
   ): Promise<string> {
+    const cleanKey = cleanEnv(apiKey);
     const systemPrompt = this.constructSystemPrompt(hospitals, language);
-    const timeoutMs = APP_CONFIG.ai.timeoutMs;
+    const timeoutMs = Math.min(APP_CONFIG.ai.timeoutMs, 6000);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      // Use header authentication to avoid leaking key in URL parameters
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+      // Pass clean API key via both URL query and header for complete compatibility
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(cleanKey)}`;
       const payload = {
         contents: [
           {
@@ -308,7 +312,7 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
+          'x-goog-api-key': cleanKey,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -338,8 +342,9 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
     modelName = 'qwen/qwen3.8-27b',
     isGroq = false
   ): Promise<string> {
+    const cleanKey = cleanEnv(apiKey).replace(/^Bearer\s+/i, '');
     const systemPrompt = this.constructSystemPrompt(hospitals, language);
-    const timeoutMs = APP_CONFIG.ai.timeoutMs;
+    const timeoutMs = Math.min(APP_CONFIG.ai.timeoutMs, 6000);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -363,7 +368,7 @@ STRICT SAFETY AND CLINICAL BOUNDARIES:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${cleanKey}`,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,

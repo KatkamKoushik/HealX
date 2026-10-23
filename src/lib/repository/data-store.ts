@@ -7,12 +7,13 @@
 import { IDataRepository } from './types';
 import { SupabaseDataStore } from './supabase-store';
 import { LocalDataStore } from './local-store';
+import { cleanEnv } from '../utils/env';
 
 let activeStore: IDataRepository | null = null;
 let cachedStoreType: 'supabase' | 'demo' | null = null;
 
 export function getDataStore(): IDataRepository {
-  const requestedMode = process.env.DATA_STORE_MODE?.trim().toLowerCase();
+  const requestedMode = cleanEnv(process.env.DATA_STORE_MODE).toLowerCase();
 
   // Explicit demo mode forced
   if (requestedMode === 'demo') {
@@ -25,7 +26,7 @@ export function getDataStore(): IDataRepository {
 
   // Check for PostgreSQL credentials
   const hasPgConnection = Boolean(
-    (process.env.DIRECT_URL || process.env.DATABASE_URL)?.trim()
+    cleanEnv(process.env.DIRECT_URL) || cleanEnv(process.env.DATABASE_URL)
   );
 
   if (hasPgConnection) {
@@ -45,7 +46,7 @@ export function getDataStore(): IDataRepository {
 }
 
 export function isDatabaseConfigured(): boolean {
-  return Boolean((process.env.DIRECT_URL || process.env.DATABASE_URL)?.trim());
+  return Boolean(cleanEnv(process.env.DIRECT_URL) || cleanEnv(process.env.DATABASE_URL));
 }
 
 export * from './types';

@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --background-rgb: 248, 250, 252;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background-color: rgb(var(--background-rgb));
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Telugu', sans-serif;
+  line-height: 1.6;
+}
+
+/* Typography Scaling for Accessibility */
+html.font-normal {
+  font-size: 16px;
+}
+
+html.font-large {
+  font-size: 18.5px;
+}
+
+html.font-xlarge {
+  font-size: 21px;
+}
+
+/* High Contrast Mode for WCAG AAA Compliance */
+html.high-contrast {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+html.high-contrast .bg-slate-50,
+html.high-contrast .bg-gray-50 {
+  background-color: #ffffff !important;
+}
+
+html.high-contrast .text-slate-600,
+html.high-contrast .text-gray-600,
+html.high-contrast .text-slate-500 {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+html.high-contrast .border-slate-200,
+html.high-contrast .border-gray-200 {
+  border-color: #000000 !important;
+  border-width: 2px !important;
+}
+
+html.high-contrast button {
+  border: 2px solid #000000 !important;
+}
+
+/* Visible Focus Indicator */
+:focus-visible {
+  outline: 3px solid #059669;
+  outline-offset: 2px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

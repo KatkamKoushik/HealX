@@ -4,11 +4,11 @@
   "private": true,
   "description": "Inclusive Healthcare Navigation Platform - SFIC Level 3 Swasth & Samavesh Bharat",
   "scripts": {
-    "dev": "node scripts/ensure-swc.mjs && NEXT_TEST_NATIVE_DIR=/tmp/swc node node_modules/next/dist/bin/next dev",
-    "build": "node scripts/ensure-swc.mjs && NEXT_TEST_NATIVE_DIR=/tmp/swc node node_modules/next/dist/bin/next build",
-    "start": "node scripts/ensure-swc.mjs && NEXT_TEST_NATIVE_DIR=/tmp/swc node node_modules/next/dist/bin/next start",
-    "lint": "node node_modules/next/dist/bin/next lint",
-    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "node --test -r ./scripts/test-register.cjs tests/*.test.ts"
   },
   "dependencies": {

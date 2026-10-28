@@ -218,6 +218,37 @@ export default function HospitalDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Interactive Google Map Embed */}
+        {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+          <div className="pt-4 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase tracking-wider">
+              <span className="flex items-center gap-1.5 text-slate-700">
+                <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                Interactive Map & Campus Navigation
+              </span>
+              <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full text-[10px] font-bold border border-blue-200">
+                Google Maps Embed
+              </span>
+            </div>
+            <div className="w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
+              <iframe
+                title={`Map of ${hospital.name}`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${
+                  hospital.latitude && hospital.longitude
+                    ? `${hospital.latitude},${hospital.longitude}`
+                    : encodeURIComponent(`${hospital.name}, ${hospital.city || ''}`)
+                }`}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Departments & Services Section */}

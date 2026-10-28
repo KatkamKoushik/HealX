@@ -22,9 +22,13 @@ export async function GET() {
   const geminiRaw = cleanEnv(process.env.GEMINI_API_KEY);
   const grokRaw = cleanEnv(process.env.GROK_API_KEY || process.env.GROQ_API_KEY);
 
-  const hasTwilioSid = Boolean(cleanEnv(process.env.TWILIO_ACCOUNT_SID));
-  const hasTwilioAuth = Boolean(cleanEnv(process.env.TWILIO_AUTH_TOKEN));
+  const hasTwilioSid = Boolean(cleanEnv(process.env.TWILIO_ACCOUNT_SID) || cleanEnv(process.env.TWILIO_API_KEY_SID));
+  const hasTwilioAuth = Boolean(cleanEnv(process.env.TWILIO_AUTH_TOKEN) || cleanEnv(process.env.TWILIO_API_KEY_SECRET));
   const hasTwilioPhone = Boolean(cleanEnv(process.env.TWILIO_PHONE_NUMBER));
+  const mapsKey = cleanEnv(process.env.GOOGLE_MAPS_API_KEY) || cleanEnv(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const hasMapsKey = Boolean(mapsKey);
+  const googleClientId = cleanEnv(process.env.GOOGLE_CLIENT_ID) || cleanEnv(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+  const hasGoogleOAuth = Boolean(googleClientId);
 
   return NextResponse.json({
     success: true,
@@ -49,6 +53,10 @@ export async function GET() {
         grokModel: cleanEnv(process.env.GROK_MODEL) || 'qwen/qwen3.8-27b',
         hasDbUrl: Boolean(cleanEnv(process.env.DATABASE_URL)),
         hasDirectUrl: Boolean(cleanEnv(process.env.DIRECT_URL)),
+        googleMapsConfigured: hasMapsKey,
+        googleMapsKeyPrefix: mapsKey ? `${mapsKey.slice(0, 6)}...${mapsKey.slice(-4)}` : 'none',
+        googleOAuthConfigured: hasGoogleOAuth,
+        googleClientIdPrefix: googleClientId ? `${googleClientId.slice(0, 8)}...` : 'none',
       },
       integrations: {
         database: {
@@ -84,8 +92,13 @@ export async function GET() {
           status: 'interactive_web_simulation',
         },
         maps: {
-          mode: APP_CONFIG.maps.mode,
-          status: 'standard_links',
+          mode: hasMapsKey ? 'api_embed' : APP_CONFIG.maps.mode,
+          apiKeyConfigured: hasMapsKey,
+          status: hasMapsKey ? 'live_maps_api' : 'standard_links',
+        },
+        googleAuth: {
+          configured: hasGoogleOAuth,
+          status: hasGoogleOAuth ? 'configured' : 'unconfigured',
         },
       },
     },

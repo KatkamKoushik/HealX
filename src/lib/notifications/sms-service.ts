@@ -76,8 +76,13 @@ export class SmsNotificationService {
     }
 
     // 2. REAL TWILIO MODE
-    const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-    const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+    const rawSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+    const apiKeySid = process.env.TWILIO_API_KEY_SID?.trim() || (rawSid?.startsWith('SK') ? rawSid : undefined);
+    const accountSid =
+      (rawSid?.startsWith('AC') ? rawSid : undefined) ||
+      process.env.TWILIO_OWNER_ACCOUNT_SID?.trim() ||
+      undefined;
+    const authToken = (process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_API_KEY_SECRET)?.trim();
     const fromPhone = process.env.TWILIO_PHONE_NUMBER?.trim();
 
     if (!accountSid || !authToken || !fromPhone) {
@@ -110,7 +115,8 @@ export class SmsNotificationService {
       params.append('From', fromPhone);
       params.append('Body', req.messageText);
 
-      const authHeader = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+      const authUser = apiKeySid || accountSid;
+      const authHeader = 'Basic ' + Buffer.from(`${authUser}:${authToken}`).toString('base64');
 
       const response = await fetch(endpoint, {
         method: 'POST',
